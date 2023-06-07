@@ -17,9 +17,8 @@ public class SphController {
     public static Grid[][] grid;
     public int initialized = 0;
 
-    /*
-    -----------------MOUSE EMITTER--------------
-     */
+    // Mouse emitter: Creates new particles based on the mouse input.
+    // When the mouse button is pressed or dragged, particles are added at the current mouse position.
     EventHandler<MouseEvent> handler = event -> {
         double startX;
         double startY;
@@ -30,6 +29,12 @@ public class SphController {
         }
     };
 
+    /*
+    Particle initializer: This method is responsible for initializing and setting the position of particles at the start of simulation.
+
+    Parameter:
+    - n (int): Starting number of particles within simulation.
+     */
     public List<Particle> initializeParticles(int n) {
         List<Particle> particles = new ArrayList<>();
         int startPositionX = 0;
@@ -47,6 +52,7 @@ public class SphController {
         return particles;
     }
 
+    // Grid Updater: Updates the size of the grid and initializes it.
     public static void updateGridSize() {
         double gridSize = Physics.gridSize;
         int gridLengthX = (int) Math.floor(Physics.width / gridSize) + 1;
@@ -59,6 +65,7 @@ public class SphController {
         }
     }
 
+    //This method initializes the simulation by setting up the necessary components and runs the simulation loop.
     public void initialize() {
         if (++initialized < 2)
             return;
@@ -85,9 +92,8 @@ public class SphController {
             updateGridSize();
         });
 
-    /*
-    -----------------LOOP--------------
-    */
+        //Loop of the simulation
+        //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
         int maxFPS = 24;
         long frameDuration = 1000 / maxFPS;
         AnimationTimer timer = new AnimationTimer() {
@@ -102,8 +108,7 @@ public class SphController {
                     Thread.sleep((frameDuration - elapsedTime));
                 } catch (InterruptedException e) {
                 }
-                previousTime = currentTime;
-
+                previousTime = currentTime;;
                 Physics.drawParticles(pane, particles);
             }
         };

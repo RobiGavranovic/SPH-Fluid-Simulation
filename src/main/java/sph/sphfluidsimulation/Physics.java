@@ -18,6 +18,7 @@ public class Physics {
 
     static ArrayList<Neighbor> neighbors = new ArrayList<>();
 
+    //updateGrids: Clears and updates grids used for particle interaction
     static void updateGrids() {
         for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
 
@@ -27,12 +28,13 @@ public class Physics {
             particle.gridY = (int) Math.floor(particle.y / gridSize);
             if (particle.gridX < 0) particle.gridX = 0;
             if (particle.gridY < 0) particle.gridY = 0;
-            if (particle.gridX > (Physics.width / gridSize) - 2) particle.gridX = (int)(Physics.width / gridSize) - 2;
-            if (particle.gridY > (Physics.height / gridSize) - 2) particle.gridY = (int)(Physics.height / gridSize) - 2;
+            if (particle.gridX > (Physics.width / gridSize) - 1) particle.gridX = (int)(Physics.width / gridSize) - 1;
+            if (particle.gridY > (Physics.height / gridSize) - 1) particle.gridY = (int)(Physics.height / gridSize)- 1;
             SphController.grid[particle.gridY][particle.gridX].addParticle(particle);
         }
     }
 
+    //findNeighbors: Clears previous neighbors list and finds current neighbors for each particle in the simulation
     static void findNeighbors() {
         neighbors.clear();
         numberOfNeighbors = 0;
@@ -59,6 +61,13 @@ public class Physics {
         }
     }
 
+    /*
+    findNeighborsInGrid: Finds neighboring particles within a specific grid cell for a given particle.
+
+    Parameters:
+    - Particle (Particle): Particle within the grid cell
+    - gridCell (Grid): Grid cell that contains particle
+     */
     static void findNeighborsInGrid(Particle particle, Grid gridCell) {
         for (Particle particleA : gridCell.getParticlesInGrid()) {
             if (particle.equals(particleA)) continue;
@@ -70,6 +79,7 @@ public class Physics {
         }
     }
 
+    //calculatePressure: Calculates the pressure for each particle in the simulation based on its density.
     public static void calculatePressure() {
         for (Particle particle : SphController.particles) {
             if (particle.density < density) particle.density = density;
@@ -77,23 +87,30 @@ public class Physics {
         }
     }
 
+    //calculateForce: Calculates the forces between particles based on their neighboring relationships.
     public static void calculateForce() {
         for (Neighbor neighbor : neighbors) neighbor.calculateForce();
     }
 
 
+    /*
+    drawParticles: Adds particles to the pane.
+
+    Parameters:
+    - pane (Pane): Display pane
+    - particles (List<Particle>): List of particles within the simulation
+     */
     public static void drawParticles(Pane pane, List<Particle> particles) {
         pane.getChildren().clear();
         for (Particle particle : particles) pane.getChildren().add(particle);
     }
 
     public static void moveParticles(List<Particle> particles) {
-        SphController.updateGridSize();
         updateGrids();
         findNeighbors();
         calculatePressure();
         calculateForce();
-        if (particles != null) for (Particle particle : particles) particle.move();
+        for (Particle particle : particles) particle.move();
     }
 
 }

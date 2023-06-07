@@ -5,11 +5,18 @@ public class Neighbor {
     double distance, weight;
     double nx, ny;
 
+    //Constructor: Creates a Neighbor relationship between two particles.
     public Neighbor(){
     }
 
+    /*
+    setParticle: sets the two particles and calculates the properties of the neighbor relationship between them.
+
+    Parameters:
+   - particleA (Particle): The first particle in the neighbor relationship.
+   - particleB (Particle): The second particle in the neighbor relationship.
+     */
     public void setParticle(Particle particleA, Particle particleB){
-        if (particleA == null || particleB == null) return;
         this.particleA = particleA;
         this.particleB = particleB;
         this.nx = particleA.x - particleB.x;
@@ -26,6 +33,7 @@ public class Neighbor {
         }
     }
 
+    //calculateForce: calculates the forces between the two particles in the neighbor relationship.
     public void calculateForce(){
         double pressureWeight = this.weight * (particleA.pressure + particleB.pressure) / (particleA.density + particleB.density) * Physics.airPressure;
         //exploding hotfix

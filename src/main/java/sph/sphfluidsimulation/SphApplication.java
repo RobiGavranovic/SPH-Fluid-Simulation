@@ -15,6 +15,7 @@ public class SphApplication extends Application {
         SphController controller = new SphController();
         FXMLLoader fxmlLoader = new FXMLLoader(SphApplication.class.getResource("sph-view.fxml"));
         fxmlLoader.setController(controller);
+        stage.setTitle("SPH Fluid Dynamics");
 
         Parent root = fxmlLoader.load();
         scene = new Scene(root, 1000, 650);
