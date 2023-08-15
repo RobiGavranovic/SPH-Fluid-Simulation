@@ -1,8 +1,12 @@
 package sph.sphfluidsimulation;
 
 import javafx.scene.layout.Pane;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Physics {
     public static final double range = 12;
@@ -18,27 +22,15 @@ public class Physics {
 
     static ArrayList<Neighbor> neighbors = new ArrayList<>();
 
-    //updateGrids: Clears and updates grids used for particle interaction
-    static void updateGrids() {
-        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
+    static List<Thread> threads = new ArrayList<>();
+    int numOfNewThreads = SphController.numOfThreads;
 
-        for (Particle particle : SphController.particles) {
-            particle.forceX = particle.forceY = particle.density = 0;
-            particle.gridX = (int) Math.floor(particle.x / gridSize);
-            particle.gridY = (int) Math.floor(particle.y / gridSize);
-            if (particle.gridX < 0) particle.gridX = 0;
-            if (particle.gridY < 0) particle.gridY = 0;
-            if (particle.gridX > (Physics.width / gridSize) - 1) particle.gridX = (int)(Physics.width / gridSize) - 1;
-            if (particle.gridY > (Physics.height / gridSize) - 1) particle.gridY = (int)(Physics.height / gridSize)- 1;
-            SphController.grid[particle.gridY][particle.gridX].addParticle(particle);
-        }
-    }
 
     //findNeighbors: Clears previous neighbors list and finds current neighbors for each particle in the simulation
     static void findNeighbors() {
         neighbors.clear();
         numberOfNeighbors = 0;
-        
+
         for (Particle particle : SphController.particles) {
             int gridX = particle.gridX;
             int gridY = particle.gridY;
@@ -55,7 +47,8 @@ public class Physics {
                 if (gridX > 0 && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX - 1]);
                 if (gridX > 0 && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX - 1]);
                 if (gridX < maxX && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX + 1]);
-                if (gridX < maxX && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
+                if (gridX < maxX && gridY < maxY)
+                    findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
             } catch (ArrayIndexOutOfBoundsException e) {
             }
         }
@@ -106,7 +99,32 @@ public class Physics {
     }
 
     public static void moveParticles(List<Particle> particles) {
-        updateGrids();
+        //clear grid before new iteration
+        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
+
+        int numOfNewThreads = 3;
+        int totalParticles = SphController.particles.size();
+        int subsection = totalParticles / numOfNewThreads;
+
+        ExecutorService executorService = Executors.newFixedThreadPool(numOfNewThreads);
+
+        for (int i = 0; i < numOfNewThreads; i++) {
+
+            int from = i * subsection;
+            int to = (i == numOfNewThreads - 1) ? totalParticles - 1 : from + subsection;
+
+            executorService.submit(new updateGridsTask(from, to));
+        }
+
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
+                System.err.println("Threads did not finish in time!");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         findNeighbors();
         calculatePressure();
         calculateForce();

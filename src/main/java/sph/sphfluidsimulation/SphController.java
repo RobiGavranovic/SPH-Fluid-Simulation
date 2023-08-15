@@ -7,6 +7,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class SphController {
     @FXML
@@ -16,6 +17,8 @@ public class SphController {
     public static List<Particle> particles;
     public static Grid[][] grid;
     public int initialized = 0;
+
+    public static int numOfThreads = 3;
 
     // Mouse emitter: Creates new particles based on the mouse input.
     // When the mouse button is pressed or dragged, particles are added at the current mouse position.
@@ -92,9 +95,14 @@ public class SphController {
             updateGridSize();
         });
 
+
+        for (int i = 0; i < numOfThreads; i++) {
+            Physics.threads.add(new Thread());
+        }
+
         //Loop of the simulation
         //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
-        int maxFPS = 24;
+        int maxFPS = 200;
         long frameDuration = 1000 / maxFPS;
         AnimationTimer timer = new AnimationTimer() {
 
