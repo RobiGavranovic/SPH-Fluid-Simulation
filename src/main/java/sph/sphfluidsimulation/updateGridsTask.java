@@ -3,7 +3,7 @@ package sph.sphfluidsimulation;
 import java.util.List;
 
 public class updateGridsTask implements Runnable {
-    int from, to, last;
+    int from, to;
 
     public updateGridsTask(int from, int to) {
         this.from = from;

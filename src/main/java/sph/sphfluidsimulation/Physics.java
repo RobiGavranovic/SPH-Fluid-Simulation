@@ -4,6 +4,7 @@ import javafx.scene.layout.Pane;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,57 +19,17 @@ public class Physics {
     public static double width = SphApplication.scene.getWidth();
     public static double height = 0;
     public static int gridSize = 20;
-    public static int numberOfNeighbors = 0;
 
+    public static int numberOfNeighbors = 0;
     static ArrayList<Neighbor> neighbors = new ArrayList<>();
 
-    static List<Thread> threads = new ArrayList<>();
-    int numOfNewThreads = SphController.numOfThreads;
+    private static final Object NEIGHBORS_LOCK = new Object();
+    private static final Object NUMBER_LOCK = new Object();
 
-
-    //findNeighbors: Clears previous neighbors list and finds current neighbors for each particle in the simulation
-    static void findNeighbors() {
-        neighbors.clear();
-        numberOfNeighbors = 0;
-
-        for (Particle particle : SphController.particles) {
-            int gridX = particle.gridX;
-            int gridY = particle.gridY;
-
-            findNeighborsInGrid(particle, SphController.grid[gridY][gridX]);
-            try {
-                int maxX = (int) (Physics.width / gridSize) - 1;
-                int maxY = (int) (Physics.height / gridSize) - 1;
-
-                if (gridX < maxX) findNeighborsInGrid(particle, SphController.grid[gridY][gridX + 1]);
-                if (gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX]);
-                if (gridX > 0) findNeighborsInGrid(particle, SphController.grid[gridY][gridX - 1]);
-                if (gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX]);
-                if (gridX > 0 && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX - 1]);
-                if (gridX > 0 && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX - 1]);
-                if (gridX < maxX && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX + 1]);
-                if (gridX < maxX && gridY < maxY)
-                    findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
-            } catch (ArrayIndexOutOfBoundsException e) {
-            }
-        }
-    }
-
-    /*
-    findNeighborsInGrid: Finds neighboring particles within a specific grid cell for a given particle.
-
-    Parameters:
-    - Particle (Particle): Particle within the grid cell
-    - gridCell (Grid): Grid cell that contains particle
-     */
-    static void findNeighborsInGrid(Particle particle, Grid gridCell) {
-        for (Particle particleA : gridCell.getParticlesInGrid()) {
-            if (particle.equals(particleA)) continue;
-            double distance = Math.pow(particle.x - particleA.x, 2) + Math.pow(particle.y - particleA.y, 2);
-            if (distance < range * range) {
-                if (neighbors.size() == numberOfNeighbors) neighbors.add(new Neighbor());
-                neighbors.get(numberOfNeighbors++).setParticle(particle, particleA);
-            }
+    public static void mergeNeighbor(List<Neighbor> subNeighbor) {
+        synchronized(NEIGHBORS_LOCK) {
+            neighbors.addAll(subNeighbor);
+            numberOfNeighbors += subNeighbor.size();
         }
     }
 
@@ -98,34 +59,61 @@ public class Physics {
         for (Particle particle : particles) pane.getChildren().add(particle);
     }
 
-    public static void moveParticles(List<Particle> particles) {
-        //clear grid before new iteration
-        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
+    static void awaitTasksCompletion(CountDownLatch latch) {
+        try {
+            if (!latch.await(1, TimeUnit.HOURS)) {
+                System.err.println("Tasks did not finish in time!");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
-        int numOfNewThreads = 3;
+    public static void moveParticles(List<Particle> particles) {
+        int numOfNewThreads = SphController.numOfThreads;
         int totalParticles = SphController.particles.size();
         int subsection = totalParticles / numOfNewThreads;
 
         ExecutorService executorService = Executors.newFixedThreadPool(numOfNewThreads);
+
+        CountDownLatch latch = new CountDownLatch(numOfNewThreads);
+
+        //clear grid for a new iteration
+        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
 
         for (int i = 0; i < numOfNewThreads; i++) {
 
             int from = i * subsection;
             int to = (i == numOfNewThreads - 1) ? totalParticles - 1 : from + subsection;
 
-            executorService.submit(new updateGridsTask(from, to));
+            executorService.submit(() -> {
+                new updateGridsTask(from, to).run();
+                latch.countDown();
+            });
         }
 
-        executorService.shutdown();
-        try {
-            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
-                System.err.println("Threads did not finish in time!");
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        awaitTasksCompletion(latch);
+
+
+        //clear neighbors for a new iteration
+
+        neighbors.clear();
+
+        CountDownLatch latch2 = new CountDownLatch(numOfNewThreads);
+
+        for (int i = 0; i < numOfNewThreads; i++) {
+            int from = i * subsection;
+            int to = (i == numOfNewThreads - 1) ? totalParticles - 1 : from + subsection;
+
+            executorService.submit(() -> {
+                new findNeighborsTask(from, to).run();
+                latch2.countDown();
+            });
         }
 
-        findNeighbors();
+        awaitTasksCompletion(latch2);
+
+
         calculatePressure();
         calculateForce();
         for (Particle particle : particles) particle.move();

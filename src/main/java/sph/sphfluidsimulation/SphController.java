@@ -7,6 +7,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class SphController {
@@ -18,7 +19,9 @@ public class SphController {
     public static Grid[][] grid;
     public int initialized = 0;
 
-    public static int numOfThreads = 3;
+    public static int numOfThreads = Runtime.getRuntime().availableProcessors() - 1;
+
+    public static boolean resizePending = false;
 
     // Mouse emitter: Creates new particles based on the mouse input.
     // When the mouse button is pressed or dragged, particles are added at the current mouse position.
@@ -87,18 +90,13 @@ public class SphController {
 
         pane.widthProperty().addListener((observable, oldValue, newValue) -> {
             Physics.width = newValue.doubleValue();
-            updateGridSize();
+            resizePending = true;
         });
 
         pane.heightProperty().addListener((observable, oldValue, newValue) -> {
             Physics.height = newValue.doubleValue();
-            updateGridSize();
+            resizePending = true;
         });
-
-
-        for (int i = 0; i < numOfThreads; i++) {
-            Physics.threads.add(new Thread());
-        }
 
         //Loop of the simulation
         //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
@@ -110,6 +108,11 @@ public class SphController {
 
             @Override
             public void handle(long currentTime) {
+                //check if window changed before new threads are created and grid is read
+                if (resizePending) {
+                    updateGridSize();
+                    resizePending = false;
+                }
                 Physics.moveParticles(particles);
                 long elapsedTime = (currentTime - previousTime) / 1_000_000;
                 if (elapsedTime < frameDuration) try {
