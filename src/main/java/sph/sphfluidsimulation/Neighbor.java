@@ -5,10 +5,6 @@ public class Neighbor {
     double distance, weight;
     double nx, ny;
 
-    //Constructor: Creates a Neighbor relationship between two particles.
-    public Neighbor(){
-    }
-
     /*
     setParticle: sets the two particles and calculates the properties of the neighbor relationship between them.
 
@@ -16,6 +12,7 @@ public class Neighbor {
    - particleA (Particle): The first particle in the neighbor relationship.
    - particleB (Particle): The second particle in the neighbor relationship.
      */
+    //credit: Mitchell Sayer: https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/blob/master/Neighbor.java
     public void setParticle(Particle particleA, Particle particleB){
         this.particleA = particleA;
         this.particleB = particleB;
@@ -34,6 +31,7 @@ public class Neighbor {
     }
 
     //calculateForce: calculates the forces between the two particles in the neighbor relationship.
+    //credit: Mitchell Sayer: https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/blob/master/Neighbor.java
     public void calculateForce(){
         double pressureWeight = this.weight * (particleA.pressure + particleB.pressure) / (particleA.density + particleB.density) * Physics.airPressure;
         //exploding hotfix

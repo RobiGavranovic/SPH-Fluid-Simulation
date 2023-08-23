@@ -7,21 +7,20 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.Random;
+
 
 public class SphController {
     @FXML
     Pane pane;
 
-    int particleSize = 1;
+    private static final int particleSize = 1;
     public static List<Particle> particles;
     public static Grid[][] grid;
     public int initialized = 0;
-
-    public static int numOfThreads = Runtime.getRuntime().availableProcessors() - 1;
-
     public static boolean resizePending = false;
+
+    public static Random random = new Random();
 
     // Mouse emitter: Creates new particles based on the mouse input.
     // When the mouse button is pressed or dragged, particles are added at the current mouse position.
@@ -71,6 +70,19 @@ public class SphController {
         }
     }
 
+    private static void rainEmitter(boolean spawnState){
+        if (spawnState) return;
+        Particle newEmitterParticle1 = new Particle((int) Physics.width * 0.33, Physics.height, particleSize);
+        Particle newEmitterParticle2 = new Particle((int) Physics.width * 0.66, Physics.height, particleSize);
+
+        //rand number: max = 10, min = 10 -> random.nextInt(max - min) + min;
+        newEmitterParticle1.velocityX += random.nextInt(10 + 10) - 10;
+        newEmitterParticle2.velocityX += random.nextInt(10 + 10) - 10;
+
+        SphController.particles.add(newEmitterParticle1);
+        SphController.particles.add(newEmitterParticle2);
+    }
+
     //This method initializes the simulation by setting up the necessary components and runs the simulation loop.
     public void initialize() {
         if (++initialized < 2)
@@ -83,7 +95,7 @@ public class SphController {
         Physics.height = pane.getHeight();
 
         updateGridSize();
-        particles = initializeParticles(5000);
+        particles = initializeParticles(SphApplication.numOfParticles);
 
         pane.setOnMousePressed(event -> handler.handle(event));
         pane.setOnMouseReleased(event -> handler.handle(event));
@@ -98,9 +110,11 @@ public class SphController {
             resizePending = true;
         });
 
+        final boolean[] rainEmitterlock = {false}; // false - ready to enter
+
         //Loop of the simulation
         //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
-        int maxFPS = 200;
+        int maxFPS = 40;
         long frameDuration = 1000 / maxFPS;
         AnimationTimer timer = new AnimationTimer() {
 
@@ -113,13 +127,21 @@ public class SphController {
                     updateGridSize();
                     resizePending = false;
                 }
+
+                //emitter - new particle every 2nd tick
+                if(SphApplication.isRainEnabled) {
+                    rainEmitterlock[0] = !rainEmitterlock[0];
+                    rainEmitter(rainEmitterlock[0]);
+                }
+
+
                 Physics.moveParticles(particles);
                 long elapsedTime = (currentTime - previousTime) / 1_000_000;
                 if (elapsedTime < frameDuration) try {
                     Thread.sleep((frameDuration - elapsedTime));
                 } catch (InterruptedException e) {
                 }
-                previousTime = currentTime;;
+                previousTime = currentTime;
                 Physics.drawParticles(pane, particles);
             }
         };
