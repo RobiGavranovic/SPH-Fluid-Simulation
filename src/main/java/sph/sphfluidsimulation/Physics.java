@@ -3,6 +3,7 @@ package sph.sphfluidsimulation;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 public class Physics {
     public static final double range = 12;
@@ -14,84 +15,26 @@ public class Physics {
     public static double width = SphApplication.scene.getWidth();
     public static double height = 0;
     public static int gridSize = 20;
+
     public static int numberOfNeighbors = 0;
-
     static ArrayList<Neighbor> neighbors = new ArrayList<>();
+    private static final Object NEIGHBORS_LOCK = new Object();
 
-    //updateGrids: Clears and updates grids used for particle interaction
-    static void updateGrids() {
-        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
+    public static int numOfNewThreads = SphApplication.numOfNewThreads;
+    public static ExecutorService executorService = Executors.newFixedThreadPool(numOfNewThreads);
 
-        for (Particle particle : SphController.particles) {
-            particle.forceX = particle.forceY = particle.density = 0;
-            particle.gridX = (int) Math.floor(particle.x / gridSize);
-            particle.gridY = (int) Math.floor(particle.y / gridSize);
-            if (particle.gridX < 0) particle.gridX = 0;
-            if (particle.gridY < 0) particle.gridY = 0;
-            if (particle.gridX > (Physics.width / gridSize) - 1) particle.gridX = (int)(Physics.width / gridSize) - 1;
-            if (particle.gridY > (Physics.height / gridSize) - 1) particle.gridY = (int)(Physics.height / gridSize)- 1;
-            SphController.grid[particle.gridY][particle.gridX].addParticle(particle);
+    public static void mergeNeighbor(List<Neighbor> subNeighbor) {
+        synchronized (NEIGHBORS_LOCK) {
+            neighbors.addAll(subNeighbor);
+            numberOfNeighbors += subNeighbor.size();
         }
     }
 
-    //findNeighbors: Clears previous neighbors list and finds current neighbors for each particle in the simulation
-    static void findNeighbors() {
-        neighbors.clear();
-        numberOfNeighbors = 0;
-        
-        for (Particle particle : SphController.particles) {
-            int gridX = particle.gridX;
-            int gridY = particle.gridY;
-
-            findNeighborsInGrid(particle, SphController.grid[gridY][gridX]);
-            try {
-                int maxX = (int) (Physics.width / gridSize) - 1;
-                int maxY = (int) (Physics.height / gridSize) - 1;
-
-                if (gridX < maxX) findNeighborsInGrid(particle, SphController.grid[gridY][gridX + 1]);
-                if (gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX]);
-                if (gridX > 0) findNeighborsInGrid(particle, SphController.grid[gridY][gridX - 1]);
-                if (gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX]);
-                if (gridX > 0 && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX - 1]);
-                if (gridX > 0 && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX - 1]);
-                if (gridX < maxX && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX + 1]);
-                if (gridX < maxX && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
-            } catch (ArrayIndexOutOfBoundsException e) {
-            }
-        }
-    }
-
-    /*
-    findNeighborsInGrid: Finds neighboring particles within a specific grid cell for a given particle.
-
-    Parameters:
-    - Particle (Particle): Particle within the grid cell
-    - gridCell (Grid): Grid cell that contains particle
-     */
-    static void findNeighborsInGrid(Particle particle, Grid gridCell) {
-        for (Particle particleA : gridCell.getParticlesInGrid()) {
-            if (particle.equals(particleA)) continue;
-            double distance = Math.pow(particle.x - particleA.x, 2) + Math.pow(particle.y - particleA.y, 2);
-            if (distance < range * range) {
-                if (neighbors.size() == numberOfNeighbors) neighbors.add(new Neighbor());
-                neighbors.get(numberOfNeighbors++).setParticle(particle, particleA);
-            }
-        }
-    }
-
-    //calculatePressure: Calculates the pressure for each particle in the simulation based on its density.
-    public static void calculatePressure() {
-        for (Particle particle : SphController.particles) {
-            if (particle.density < density) particle.density = density;
-            particle.pressure = particle.density - density;
-        }
-    }
-
+    //could do parallel
     //calculateForce: Calculates the forces between particles based on their neighboring relationships.
     public static void calculateForce() {
         for (Neighbor neighbor : neighbors) neighbor.calculateForce();
     }
-
 
     /*
     drawParticles: Adds particles to the pane.
@@ -106,11 +49,49 @@ public class Physics {
     }
 
     public static void moveParticles(List<Particle> particles) {
-        updateGrids();
-        findNeighbors();
-        calculatePressure();
+        int totalParticles = SphController.particles.size();
+        int subsection = totalParticles / numOfNewThreads;
+
+        List<Callable<Void>> updateGridTasks = new ArrayList<>();
+        List<Callable<Void>> findNeighborsTasks = new ArrayList<>();
+        List<Callable<Void>> calculatePressureTasks = new ArrayList<>();
+
+        for (int i = 0; i < numOfNewThreads; i++) {
+            int from = i * subsection;
+            int to = (i == numOfNewThreads - 1) ? totalParticles - 1 : from + subsection;
+
+            updateGridTasks.add(() -> {
+                new UpdateGridsTask(from, to).run();
+                return null;
+            });
+
+            findNeighborsTasks.add(() -> {
+                new FindNeighborsTask(from, to).run();
+                return null;
+            });
+
+            calculatePressureTasks.add(() -> {
+                new CalculatePressureTask(from, to).run();
+                return null;
+            });
+        }
+
+        //clear grid for a new iteration
+        for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
+
+        try {
+            executorService.invokeAll(updateGridTasks);
+            //clear neighbors for a new iteration
+            neighbors.clear();
+            executorService.invokeAll(findNeighborsTasks);
+            executorService.invokeAll(calculatePressureTasks);
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         calculateForce();
+        //could do parallel  as calculateForce() task at the end of the thread's calculation work.
         for (Particle particle : particles) particle.move();
     }
-
 }
