@@ -2,10 +2,10 @@ package sph.sphfluidsimulation;
 
 import java.util.List;
 
-public class updateGridsTask implements Runnable {
+public class UpdateGridsTask implements Runnable {
     int from, to;
 
-    public updateGridsTask(int from, int to) {
+    public UpdateGridsTask(int from, int to) {
         this.from = from;
         this.to = to;
     }
@@ -13,7 +13,7 @@ public class updateGridsTask implements Runnable {
     @Override
     public void run() {
         //updateGrids: updates grids used for particle interaction
-        //prvo sequential clearing
+        //credit: Mitchell Sayer
         List<Particle> subParticles = SphController.particles.subList(this.from, this.to);
         for (Particle particle : subParticles) {
             particle.forceX = particle.forceY = particle.density = 0;
@@ -27,6 +27,5 @@ public class updateGridsTask implements Runnable {
                 particle.gridY = (int) (Physics.height / Physics.gridSize) - 1;
             SphController.grid[particle.gridY][particle.gridX].addParticle(particle);
         }
-
     }
 }

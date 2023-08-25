@@ -3,17 +3,20 @@ package sph.sphfluidsimulation;
 import java.util.ArrayList;
 import java.util.List;
 
-public class findNeighborsTask implements Runnable {
+public class FindNeighborsTask implements Runnable {
     int gridSize;
     double range;
+
+    //sub lists that a single thread works on
     List<Particle> subParticles;
     ArrayList<Neighbor> subNeighbor = new ArrayList<>();
 
-    public findNeighborsTask(int from, int to) {
+    public FindNeighborsTask(int from, int to) {
         subParticles = SphController.particles.subList(from, to);
     }
 
     @Override
+    //credit: Mitchell Sayer
     public void run() {
         //findNeighbors: finds current neighbors for each particle in the sublist
         this.gridSize = Physics.gridSize;
@@ -40,7 +43,7 @@ public class findNeighborsTask implements Runnable {
             } catch (ArrayIndexOutOfBoundsException e) {
             }
         }
-        Physics.mergeNeighbor(subNeighbor);
+        Physics.mergeNeighbor(subNeighbor); //synchronised writing
     }
 
     /*
@@ -50,13 +53,14 @@ public class findNeighborsTask implements Runnable {
     - Particle (Particle): Particle within the grid cell
     - gridCell (Grid): Grid cell that contains particle
      */
+    //credit: Mitchell Sayer
     void findNeighborsInGrid(Particle particle, Grid gridCell) {
         for (Particle particleA : gridCell.getParticlesInGrid()) {
             if (particle.equals(particleA)) continue;
             double distance = Math.pow(particle.x - particleA.x, 2) + Math.pow(particle.y - particleA.y, 2);
             if (distance < range * range) {
                 Neighbor newNeighbor = new Neighbor();
-                newNeighbor.setParticle(particle, particleA);
+                newNeighbor.setNeighbor(particle, particleA);
                 subNeighbor.add(newNeighbor);
             }
         }

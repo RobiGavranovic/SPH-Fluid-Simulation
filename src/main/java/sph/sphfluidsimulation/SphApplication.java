@@ -9,6 +9,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -17,6 +18,9 @@ public class SphApplication extends Application {
     public static int numOfNewThreads;
     public static int numOfParticles;
     public static boolean isRainEnabled;
+
+    //if("distributed".equals(mode) DistributedMode.main(SphApplication.args))
+    public static String[] args;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -29,7 +33,7 @@ public class SphApplication extends Application {
 
         TextField particleCountField = new TextField("5000");
         ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList("Sequential", "Parallel"));
-        modeComboBox.setValue("Sequential");
+        modeComboBox.setValue("Parallel");
         ComboBox<String> rainComboBox = new ComboBox<>(FXCollections.observableArrayList("On", "Off"));
         rainComboBox.setValue("Off");
 
@@ -60,6 +64,8 @@ public class SphApplication extends Application {
         numOfNewThreads = "Sequential".equals(result.get(1)) ? 1 : Runtime.getRuntime().availableProcessors();
         isRainEnabled = "On".equals(result.get(2));
 
+        //distributed
+        // if(result.get(1).equals("Sequential")) DistributedMode.distributedHello(SphApplication.args);
 
         //simulation window
         SphController controller = new SphController();
@@ -78,6 +84,8 @@ public class SphApplication extends Application {
     }
 
     public static void main(String[] args) {
-        launch();
+        SphApplication.args = args;
+        DistributedMode.main(args);
+        //launch();  //to sem zakomentiral, ker želim testirati samo če dela distributed helloworld
     }
 }

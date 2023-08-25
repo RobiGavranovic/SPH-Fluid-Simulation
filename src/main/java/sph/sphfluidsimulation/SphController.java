@@ -30,7 +30,7 @@ public class SphController {
         if (event.getEventType() == MouseEvent.MOUSE_PRESSED || event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
             startX = event.getSceneX();
             startY = event.getSceneY();
-            SphController.particles.add(new Particle(startX, SphApplication.scene.getHeight() - startY, 1));
+            SphController.particles.add(new Particle(startX, SphApplication.scene.getHeight() - startY, particleSize));
         }
     };
 
@@ -110,7 +110,7 @@ public class SphController {
             resizePending = true;
         });
 
-        final boolean[] rainEmitterlock = {false}; // false - ready to enter
+        final boolean[] rainEmitterLock = {false}; // false - ready to enter
 
         //Loop of the simulation
         //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
@@ -130,10 +130,9 @@ public class SphController {
 
                 //emitter - new particle every 2nd tick
                 if(SphApplication.isRainEnabled) {
-                    rainEmitterlock[0] = !rainEmitterlock[0];
-                    rainEmitter(rainEmitterlock[0]);
+                    rainEmitterLock[0] = !rainEmitterLock[0];
+                    rainEmitter(rainEmitterLock[0]);
                 }
-
 
                 Physics.moveParticles(particles);
                 long elapsedTime = (currentTime - previousTime) / 1_000_000;

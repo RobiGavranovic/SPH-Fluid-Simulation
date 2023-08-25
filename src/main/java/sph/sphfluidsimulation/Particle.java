@@ -3,8 +3,9 @@ package sph.sphfluidsimulation;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
+import static sph.sphfluidsimulation.SphController.random;
+
 public class Particle extends Circle {
-    public double[] velocity;
     public double velocityX, velocityY;
     public double x, y;
     public int gridX, gridY;
@@ -19,12 +20,8 @@ public class Particle extends Circle {
         this.setCenterY(Physics.height - y);
         this.setFill(Color.CADETBLUE);
 
-        //credit: Mitchell Sayer
-        velocity = new double[2];
-        velocity[0] = ((Math.random()*2)-1);
-        velocity[1] = ((Math.random()*2)-1);
-        velocityX = velocity[0];
-        velocityY = velocity[1];
+        velocityX = random.nextInt(1 + 1) - 1;
+        velocityY = random.nextInt(1 + 1) - 1;;
     }
 
     //move: Updates the position and velocity of the particle based on the applied forces and other conditions.
@@ -47,6 +44,6 @@ public class Particle extends Circle {
             this.velocityY += (Physics.height - this.y) * 0.3 - this.velocityY * 0.3;
 
         setCenterX(this.x);
-        setCenterY(Physics.height - this.y - 3); // 6 is number from trial and error -> issue: particles were going through the bottom a bit for some reason
+        setCenterY(Physics.height - this.y - 3); // 3 is number from trial and error -> issue: particles were going through the bottom a bit for some reason
     }
 }
