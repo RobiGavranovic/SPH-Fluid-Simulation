@@ -11,64 +11,85 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+
 
 public class SphApplication extends Application {
     public static Scene scene;
-    public static int numOfNewThreads;
-    public static int numOfParticles;
-    public static boolean isRainEnabled;
 
-    //if("distributed".equals(mode) DistributedMode.main(SphApplication.args))
-    public static String[] args;
-
-    @Override
-    public void start(Stage stage) throws IOException {
-
+    DialogConfig showConfigurationDialog(boolean isWrongInput) {
+        //configuration dialog
         Dialog<List<Object>> dialog = new Dialog<>();
-        dialog.setTitle("Particle Simulation Configuration");
+        dialog.setTitle("SPH Fluid Simulation Configuration");
 
         ButtonType buttonOkay = new ButtonType("Okay", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(buttonOkay, ButtonType.CANCEL);
 
         TextField particleCountField = new TextField("5000");
-        ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList("Sequential", "Parallel"));
-        modeComboBox.setValue("Parallel");
-        ComboBox<String> rainComboBox = new ComboBox<>(FXCollections.observableArrayList("On", "Off"));
-        rainComboBox.setValue("Off");
+        ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList(
+                SimulationMode.SEQUENTIAL.toString(),
+                SimulationMode.PARALLEL.toString(),
+                SimulationMode.DISTRIBUTED.toString())
+        );
+        modeComboBox.setValue(SimulationMode.PARALLEL.toString());
+        CheckBox rainCheckBox = new CheckBox("Rain Emitter");
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.addRow(0, new Label("Number of particles:"), particleCountField);
         grid.addRow(1, new Label("Mode:"), modeComboBox);
-        grid.addRow(2, new Label("Rain:"), rainComboBox);
+        grid.addRow(2, new Label("Rain:"), rainCheckBox);
+        if (isWrongInput) grid.addRow(3, new Label("Wrong input, please try again"));
 
         dialog.getDialogPane().setContent(grid);
-        dialog.setResultConverter(btn -> List.of(particleCountField.getText(), modeComboBox.getValue(), rainComboBox.getValue()));
+        dialog.setResultConverter(
+                btn -> {
+                    if (btn.getButtonData().isCancelButton()) {
+                        Platform.exit();
+                    }
+                    List<Object> result = new ArrayList<>();
+                    result.add(new DialogConfig(particleCountField.getText(), SimulationMode.fromString(modeComboBox.getValue()), rainCheckBox.isSelected()));
+                    return result;
+                });
 
         List<Object> result = dialog.showAndWait().orElse(null);
+        DialogConfig dialogConfig = (DialogConfig) result.get(0);
 
-        if (result == null) {
-            Platform.exit();
-            return;
-        }
+        return dialogConfig;
+    }
 
+    boolean validateParticleCount(DialogConfig dialogConfig) {
         try {
-            numOfParticles = Integer.parseInt((String) result.get(0));
+            int particleCount = Integer.parseInt(dialogConfig.particleCount);
+            if (particleCount >= 0 && particleCount < 10_000) return true;
+            else return false;
         } catch (NumberFormatException e) {
-            System.out.println("Invalid input. Using default value of 5000.");
-            numOfParticles = 5000;
+            return false;
+        }
+    }
+
+    @Override
+    public void start(Stage stage) throws IOException {
+        //show initial window with no wrong input warning
+        DialogConfig dialogConfig = showConfigurationDialog(false);
+        //check if valid particle count input -> if not show dialog again
+        while (!validateParticleCount(dialogConfig)) {
+            dialogConfig = showConfigurationDialog(true);
         }
 
-        numOfNewThreads = "Sequential".equals(result.get(1)) ? 1 : Runtime.getRuntime().availableProcessors();
-        isRainEnabled = "On".equals(result.get(2));
+        SimulationContext simulationContext = new SimulationContext(dialogConfig);
+        startSimulation(stage, simulationContext);
+    }
 
-        //distributed
-        // if(result.get(1).equals("Sequential")) DistributedMode.distributedHello(SphApplication.args);
+    public static void main(String[] args) {
+        launch();
+    }
 
-        //simulation window
-        SphController controller = new SphController();
+    //simulation window
+    public void startSimulation(Stage stage, SimulationContext simulationContext) throws IOException {
+        SphController controller = new SphController(simulationContext);
         FXMLLoader fxmlLoader = new FXMLLoader(SphApplication.class.getResource("sph-view.fxml"));
         fxmlLoader.setController(controller);
         stage.setTitle("Smoothed-particle hydrodynamics fluid simulation");
@@ -79,13 +100,8 @@ public class SphApplication extends Application {
         scene.setOnMouseDragged(controller.handler);
         stage.setScene(scene);
         stage.show();
-
+        controller.simulationContext.width = scene.getWidth();
+        controller.simulationContext.height = scene.getHeight();
         controller.initialize();
-    }
-
-    public static void main(String[] args) {
-        SphApplication.args = args;
-        DistributedMode.main(args);
-        //launch();  //to sem zakomentiral, ker želim testirati samo če dela distributed helloworld
     }
 }

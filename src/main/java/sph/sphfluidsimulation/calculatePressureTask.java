@@ -1,8 +1,9 @@
 package sph.sphfluidsimulation;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
-public class CalculatePressureTask implements Runnable {
+public class CalculatePressureTask implements Callable<Void> {
     double density = Physics.density;
     List<Particle> subParticles;
 
@@ -12,12 +13,13 @@ public class CalculatePressureTask implements Runnable {
     }
 
     @Override
-    public void run() {
+    public Void call() {
         //calculatePressure: Calculates the pressure for each particle in the simulation based on its density.
         //credit: Mitchell Sayer
         for (Particle particle : subParticles) {
             if (particle.density < density) particle.density = density;
             particle.pressure = particle.density - density;
         }
+        return null;
     }
 }

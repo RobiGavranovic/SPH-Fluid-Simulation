@@ -4,6 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <repositories>
+        <repository>
+            <id>mvnrepository</id>
+            <url>https://invesdwin.de/repo/invesdwin-oss/</url>
+        </repository>
+    </repositories>
+
     <groupId>SPH</groupId>
     <artifactId>SPHFluidSimulation</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -25,7 +32,16 @@
             <artifactId>javafx-fxml</artifactId>
             <version>17-ea+11</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.mpjexpress</groupId>
+            <artifactId>mpj</artifactId>
+            <version>0.44</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

@@ -12,12 +12,12 @@ public class Particle extends Circle {
     public double forceX, forceY;
     public double pressure, density;
 
-    public Particle(double x, double y, double radius) {
+    public Particle(double x, double y, double radius, SimulationContext simulationContext) {
         this.x = x;
         this.y = y;
         this.setRadius(radius);
         this.setCenterX(x);
-        this.setCenterY(Physics.height - y);
+        this.setCenterY(simulationContext.height - y);
         this.setFill(Color.CADETBLUE);
 
         velocityX = random.nextInt(1 + 1) - 1;
@@ -26,7 +26,7 @@ public class Particle extends Circle {
 
     //move: Updates the position and velocity of the particle based on the applied forces and other conditions.
     //credit: Mitchell Sayer: https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/blob/master/Particle.java
-    public void move() {
+    public void move(SimulationContext simulationContext) {
         double radius = this.getRadius();
         this.velocityY -= Physics.gravity;
         this.velocityX += this.forceX;
@@ -38,12 +38,12 @@ public class Particle extends Circle {
             this.velocityX += (radius - this.x) * 0.5 - this.velocityX * 0.5;
         if (this.y < 0)
             this.velocityY += (radius - this.y) * 0.5 - this.velocityY * 0.5;
-        if (this.x > Physics.width)
-            this.velocityX += (Physics.width - this.x) * 0.5 - this.velocityX * 0.5;
-        if (this.y > Physics.height)
-            this.velocityY += (Physics.height - this.y) * 0.3 - this.velocityY * 0.3;
+        if (this.x > simulationContext.width)
+            this.velocityX += (simulationContext.width - this.x) * 0.5 - this.velocityX * 0.5;
+        if (this.y > simulationContext.height)
+            this.velocityY += (simulationContext.height - this.y) * 0.3 - this.velocityY * 0.3;
 
         setCenterX(this.x);
-        setCenterY(Physics.height - this.y - 3); // 3 is number from trial and error -> issue: particles were going through the bottom a bit for some reason
+        setCenterY(simulationContext.height - this.y - 3); // 3 is number from trial and error -> issue: particles were going through the bottom a bit for some reason
     }
 }

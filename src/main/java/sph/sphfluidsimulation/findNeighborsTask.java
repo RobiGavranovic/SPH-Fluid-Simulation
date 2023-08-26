@@ -2,25 +2,33 @@ package sph.sphfluidsimulation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
-public class FindNeighborsTask implements Runnable {
+public class FindNeighborsTask implements Callable<Void> {
     int gridSize;
     double range;
+    double width, height;
 
     //sub lists that a single thread works on
     List<Particle> subParticles;
     ArrayList<Neighbor> subNeighbor = new ArrayList<>();
+    SimulationContext simulationContext;
+    Physics physics;
 
-    public FindNeighborsTask(int from, int to) {
-        subParticles = SphController.particles.subList(from, to);
+    public FindNeighborsTask(int from, int to, SimulationContext simulationContext, Physics physics) {
+        this.subParticles = SphController.particles.subList(from, to);
+        this.simulationContext = simulationContext;
+        this.physics = physics;
+        this.range = Physics.range;
+        this.gridSize = Physics.gridSize;
+        this.width = simulationContext.width;
+        this.height = simulationContext.height;
     }
 
     @Override
     //credit: Mitchell Sayer
-    public void run() {
+    public Void call() {
         //findNeighbors: finds current neighbors for each particle in the sublist
-        this.gridSize = Physics.gridSize;
-        this.range = Physics.range;
 
         for (Particle particle : subParticles) {
             int gridX = particle.gridX;
@@ -28,8 +36,8 @@ public class FindNeighborsTask implements Runnable {
 
             findNeighborsInGrid(particle, SphController.grid[gridY][gridX]);
             try {
-                int maxX = (int) (Physics.width / gridSize) - 1;
-                int maxY = (int) (Physics.height / gridSize) - 1;
+                int maxX = (int) (width / gridSize) - 1;
+                int maxY = (int) (height / gridSize) - 1;
 
                 if (gridX < maxX) findNeighborsInGrid(particle, SphController.grid[gridY][gridX + 1]);
                 if (gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX]);
@@ -43,7 +51,8 @@ public class FindNeighborsTask implements Runnable {
             } catch (ArrayIndexOutOfBoundsException e) {
             }
         }
-        Physics.mergeNeighbor(subNeighbor); //synchronised writing
+        physics.mergeNeighbor(subNeighbor); //synchronised writing
+        return null;
     }
 
     /*
