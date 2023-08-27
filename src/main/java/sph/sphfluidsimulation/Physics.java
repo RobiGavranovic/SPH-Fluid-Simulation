@@ -1,97 +1,113 @@
 package sph.sphfluidsimulation;
 
+import javafx.application.Platform;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
 public class Physics {
+    //constants
     public static final double range = 12;
     public static final double gravity = 0.55;
     public static final double airPressure = 1;
     public static final double viscosity = 0.07;
     public static final double density = 1;
+    public static final int gridSize = 20;
 
-    public static double width = SphApplication.scene.getWidth();
-    public static double height = 0;
-    public static int gridSize = 20;
+    ArrayList<Neighbor> neighbors;
+    final Object NEIGHBORS_LOCK;
 
-    public static int numberOfNeighbors = 0;
-    static ArrayList<Neighbor> neighbors = new ArrayList<>();
-    private static final Object NEIGHBORS_LOCK = new Object();
+    public SimulationContext simulationContext;
+    public ExecutorService executorService;
+    CountDownLatch latch;
 
-    public static int numOfNewThreads = SphApplication.numOfNewThreads;
-    public static ExecutorService executorService = Executors.newFixedThreadPool(numOfNewThreads);
+    public Physics(SimulationContext simulationContext) {
+        this.simulationContext = simulationContext;
 
-    public static void mergeNeighbor(List<Neighbor> subNeighbor) {
-        synchronized (NEIGHBORS_LOCK) {
-            neighbors.addAll(subNeighbor);
-            numberOfNeighbors += subNeighbor.size();
-        }
+        neighbors = new ArrayList<>();
+        NEIGHBORS_LOCK = new Object();
+
+        executorService = Executors.newFixedThreadPool(simulationContext.threadCount);
     }
 
     //could do parallel
     //calculateForce: Calculates the forces between particles based on their neighboring relationships.
-    public static void calculateForce() {
+    public void calculateForce() {
         for (Neighbor neighbor : neighbors) neighbor.calculateForce();
     }
 
+
+
     /*
     drawParticles: Adds particles to the pane.
-
     Parameters:
     - pane (Pane): Display pane
     - particles (List<Particle>): List of particles within the simulation
      */
-    public static void drawParticles(Pane pane, List<Particle> particles) {
-        pane.getChildren().clear();
-        for (Particle particle : particles) pane.getChildren().add(particle);
+    public void drawParticles(Pane pane, List<Particle> particles) {
+        //force run on JavaFX thread
+        Platform.runLater(() -> {
+            int paneParticleCount = pane.getChildren().size();
+            int particleCount = particles.size();
+            //if new particles were added
+            if (particleCount > paneParticleCount) {
+                // add new particles to the pane
+                for (int i = paneParticleCount; i < particleCount; i++) {
+                    pane.getChildren().add(particles.get(i));
+                }
+            }
+        });
     }
 
-    public static void moveParticles(List<Particle> particles) {
-        int totalParticles = SphController.particles.size();
-        int subsection = totalParticles / numOfNewThreads;
-
-        List<Callable<Void>> updateGridTasks = new ArrayList<>();
-        List<Callable<Void>> findNeighborsTasks = new ArrayList<>();
-        List<Callable<Void>> calculatePressureTasks = new ArrayList<>();
-
-        for (int i = 0; i < numOfNewThreads; i++) {
-            int from = i * subsection;
-            int to = (i == numOfNewThreads - 1) ? totalParticles - 1 : from + subsection;
-
-            updateGridTasks.add(() -> {
-                new UpdateGridsTask(from, to).run();
-                return null;
-            });
-
-            findNeighborsTasks.add(() -> {
-                new FindNeighborsTask(from, to).run();
-                return null;
-            });
-
-            calculatePressureTasks.add(() -> {
-                new CalculatePressureTask(from, to).run();
-                return null;
-            });
-        }
-
+    public void moveParticles(List<Particle> particles, SimulationContext simulationContext) throws InterruptedException {
         //clear grid for a new iteration
         for (Grid[] grids : SphController.grid) for (Grid grid : grids) grid.clearGrid();
 
-        try {
-            executorService.invokeAll(updateGridTasks);
-            //clear neighbors for a new iteration
-            neighbors.clear();
-            executorService.invokeAll(findNeighborsTasks);
-            executorService.invokeAll(calculatePressureTasks);
+        //clear neighbors for a new iteration
+        neighbors.clear();
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        int totalParticles = SphController.particles.size();
+        int subsection = totalParticles / this.simulationContext.threadCount;
+
+        List<Callable<Void>> updateGridTasks = new ArrayList<>();
+        List<Callable<Void>> calculatePressureTasks = new ArrayList<>();
+
+        //make smaller chunks for threads
+        for (int i = 0; i < simulationContext.threadCount; i++) {
+            int from = i * subsection;
+            int to = (i == simulationContext.threadCount - 1) ? totalParticles - 1 : from + subsection;
+
+            updateGridTasks.add(new UpdateGridsTask(from, to, simulationContext, this));
         }
+        executorService.invokeAll(updateGridTasks);
+
+        //make smaller chunks for threads
+        //latch -> make sure all threads have finished, before calculating pressure
+        latch = new CountDownLatch(SphController.particles.size());
+        for (Particle particle : particles) {
+            executorService.submit(() -> {
+                try {
+                    new FindNeighborsTask(simulationContext, this, particle, neighbors).call();
+                } finally {
+                    // latch count-- when thread is done
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        //make smaller chunks for threads
+        for (int i = 0; i < simulationContext.threadCount; i++) {
+            int from = i * subsection;
+            int to = (i == simulationContext.threadCount - 1) ? totalParticles - 1 : from + subsection;
+
+            calculatePressureTasks.add(new CalculatePressureTask(from, to));
+        }
+        executorService.invokeAll(calculatePressureTasks);
 
         calculateForce();
         //could do parallel  as calculateForce() task at the end of the thread's calculation work.
-        for (Particle particle : particles) particle.move();
+        for (Particle particle : particles) particle.move(simulationContext);
     }
 }

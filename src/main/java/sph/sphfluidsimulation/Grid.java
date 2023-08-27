@@ -21,6 +21,4 @@ public class Grid {
     public ArrayList<Particle> getParticlesInGrid() {
         return particlesInGrid;
     }
-
-
 }
