@@ -9,7 +9,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +16,7 @@ import java.util.List;
 
 public class SphApplication extends Application {
     public static Scene scene;
+    boolean cancel = false;
 
     DialogConfig showConfigurationDialog(boolean isWrongInput) {
         //configuration dialog
@@ -44,10 +44,12 @@ public class SphApplication extends Application {
         if (isWrongInput) grid.addRow(3, new Label("Wrong input, please try again"));
 
         dialog.getDialogPane().setContent(grid);
+
         dialog.setResultConverter(
                 btn -> {
                     if (btn.getButtonData().isCancelButton()) {
                         Platform.exit();
+                        cancel = true;
                     }
                     List<Object> result = new ArrayList<>();
                     result.add(new DialogConfig(particleCountField.getText(), SimulationMode.fromString(modeComboBox.getValue()), rainCheckBox.isSelected()));
@@ -61,9 +63,11 @@ public class SphApplication extends Application {
     }
 
     boolean validateParticleCount(DialogConfig dialogConfig) {
+        //if cancel button -> fail the validation check
+        if (cancel) return false;
         try {
             int particleCount = Integer.parseInt(dialogConfig.particleCount);
-            if (particleCount >= 0 && particleCount < 10_000) return true;
+            if (particleCount > 0 && particleCount <= 20_000) return true;
             else return false;
         } catch (NumberFormatException e) {
             return false;
@@ -76,6 +80,8 @@ public class SphApplication extends Application {
         DialogConfig dialogConfig = showConfigurationDialog(false);
         //check if valid particle count input -> if not show dialog again
         while (!validateParticleCount(dialogConfig)) {
+            //if cancel button -> return before showing the simulation
+            if (cancel) return;
             dialogConfig = showConfigurationDialog(true);
         }
 

@@ -21,7 +21,8 @@ public class Particle extends Circle {
         this.setFill(Color.CADETBLUE);
 
         velocityX = random.nextInt(1 + 1) - 1;
-        velocityY = random.nextInt(1 + 1) - 1;;
+        velocityY = random.nextInt(1 + 1) - 1;
+        ;
     }
 
     //move: Updates the position and velocity of the particle based on the applied forces and other conditions.
@@ -41,9 +42,10 @@ public class Particle extends Circle {
         if (this.x > simulationContext.width)
             this.velocityX += (simulationContext.width - this.x) * 0.5 - this.velocityX * 0.5;
         if (this.y > simulationContext.height)
-            this.velocityY += (simulationContext.height - this.y) * 0.3 - this.velocityY * 0.3;
+            this.velocityY += (simulationContext.height - this.y) * 0.5 - this.velocityY * 0.5;
 
         setCenterX(this.x);
         setCenterY(simulationContext.height - this.y - 3); // 3 is number from trial and error -> issue: particles were going through the bottom a bit for some reason
+
     }
 }

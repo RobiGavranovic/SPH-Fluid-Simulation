@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-
 public class SphController {
     @FXML
     Pane pane;
@@ -129,14 +128,14 @@ public class SphController {
         int maxFPS = 1000;
         long frameDuration = 1000 / maxFPS;
 
-        //loop runs on animation timer
+        //simulation loop runs on animation timer
         AnimationTimer timer = new AnimationTimer() {
 
             private long previousTime = 0;
 
             @Override
             public void handle(long currentTime) {
-                //check if window changed before new threads are created and grid is read
+                //check if window changed before the grid is read
                 if (resizePending) {
                     grid = updateGridSize(simulationContext.width, simulationContext.height, Physics.gridSize);
                     resizePending = false;
@@ -153,12 +152,6 @@ public class SphController {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                long elapsedTime = (currentTime - previousTime) / 1_000_000;
-                if (elapsedTime < frameDuration) try {
-                    Thread.sleep((frameDuration - elapsedTime));
-                } catch (InterruptedException e) {
-                }
-                previousTime = currentTime;
                 physics.drawParticles(pane, particles);
             }
         };

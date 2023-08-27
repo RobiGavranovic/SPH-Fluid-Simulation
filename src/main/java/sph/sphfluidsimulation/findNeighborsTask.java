@@ -10,48 +10,51 @@ public class FindNeighborsTask implements Callable<Void> {
     double width, height;
 
     //sub lists that a single thread works on
-    List<Particle> subParticles;
     ArrayList<Neighbor> subNeighbor = new ArrayList<>();
     SimulationContext simulationContext;
+    Particle particle;
+    List<Neighbor> neighbors;
     Physics physics;
 
-    public FindNeighborsTask(int from, int to, SimulationContext simulationContext, Physics physics) {
-        this.subParticles = SphController.particles.subList(from, to);
+    public FindNeighborsTask(SimulationContext simulationContext, Physics physics, Particle particle, List<Neighbor> neighbors) {
         this.simulationContext = simulationContext;
-        this.physics = physics;
         this.range = Physics.range;
         this.gridSize = Physics.gridSize;
         this.width = simulationContext.width;
         this.height = simulationContext.height;
+        this.particle = particle;
+        this.neighbors = neighbors;
+        this.physics = physics;
     }
 
     @Override
     //credit: Mitchell Sayer
     public Void call() {
-        //findNeighbors: finds current neighbors for each particle in the sublist
+        //findNeighbors: finds current neighbors for each particle
+        int gridX = particle.gridX;
+        int gridY = particle.gridY;
 
-        for (Particle particle : subParticles) {
-            int gridX = particle.gridX;
-            int gridY = particle.gridY;
+        findNeighborsInGrid(particle, SphController.grid[gridY][gridX]);
+        try {
+            int maxX = (int) (width / gridSize) - 1;
+            int maxY = (int) (height / gridSize) - 1;
 
-            findNeighborsInGrid(particle, SphController.grid[gridY][gridX]);
-            try {
-                int maxX = (int) (width / gridSize) - 1;
-                int maxY = (int) (height / gridSize) - 1;
-
-                if (gridX < maxX) findNeighborsInGrid(particle, SphController.grid[gridY][gridX + 1]);
-                if (gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX]);
-                if (gridX > 0) findNeighborsInGrid(particle, SphController.grid[gridY][gridX - 1]);
-                if (gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX]);
-                if (gridX > 0 && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX - 1]);
-                if (gridX > 0 && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX - 1]);
-                if (gridX < maxX && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX + 1]);
-                if (gridX < maxX && gridY < maxY)
-                    findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
-            } catch (ArrayIndexOutOfBoundsException e) {
-            }
+            if (gridX < maxX) findNeighborsInGrid(particle, SphController.grid[gridY][gridX + 1]);
+            if (gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX]);
+            if (gridX > 0) findNeighborsInGrid(particle, SphController.grid[gridY][gridX - 1]);
+            if (gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX]);
+            if (gridX > 0 && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX - 1]);
+            if (gridX > 0 && gridY < maxY) findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX - 1]);
+            if (gridX < maxX && gridY > 0) findNeighborsInGrid(particle, SphController.grid[gridY - 1][gridX + 1]);
+            if (gridX < maxX && gridY < maxY)
+                findNeighborsInGrid(particle, SphController.grid[gridY + 1][gridX + 1]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
         }
-        physics.mergeNeighbor(subNeighbor); //synchronised writing
+
+        synchronized(physics.neighbors) {
+            physics.neighbors.addAll(subNeighbor);
+        }; //synchronised writing
         return null;
     }
 

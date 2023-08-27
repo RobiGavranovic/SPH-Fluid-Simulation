@@ -18,6 +18,7 @@ public class SimulationContext extends DialogConfig {
                 break;
             case DISTRIBUTED:
                 //TODO smth with the distributed
+                //guess not, apparently im making a separate project for distributed version =)
                 break;
         }
 
