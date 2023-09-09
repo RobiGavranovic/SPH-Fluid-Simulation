@@ -27,10 +27,18 @@ public class SphApplication extends Application {
         ButtonType buttonOkay = new ButtonType("Okay", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(buttonOkay, ButtonType.CANCEL);
 
+<<<<<<< HEAD
         TextField particleCountField = new TextField("3000");
         ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList(
                 SimulationMode.SEQUENTIAL.toString(),
                 SimulationMode.PARALLEL.toString())
+=======
+        TextField particleCountField = new TextField("5000");
+        ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList(
+                SimulationMode.SEQUENTIAL.toString(),
+                SimulationMode.PARALLEL.toString(),
+                SimulationMode.DISTRIBUTED.toString())
+>>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
         );
         modeComboBox.setValue(SimulationMode.PARALLEL.toString());
         CheckBox rainCheckBox = new CheckBox("Rain Emitter");
@@ -87,6 +95,7 @@ public class SphApplication extends Application {
 
         SimulationContext simulationContext = new SimulationContext(dialogConfig);
         startSimulation(stage, simulationContext);
+<<<<<<< HEAD
     }
 
     public static void main(String[] args) {
@@ -110,4 +119,29 @@ public class SphApplication extends Application {
         controller.simulationContext.height = scene.getHeight();
         controller.initialize();
     }
+=======
+    }
+
+    public static void main(String[] args) {
+        launch();
+    }
+
+    //simulation window
+    public void startSimulation(Stage stage, SimulationContext simulationContext) throws IOException {
+        SphController controller = new SphController(simulationContext);
+        FXMLLoader fxmlLoader = new FXMLLoader(SphApplication.class.getResource("sph-view.fxml"));
+        fxmlLoader.setController(controller);
+        stage.setTitle("Smoothed-particle hydrodynamics fluid simulation");
+
+        Parent root = fxmlLoader.load();
+        scene = new Scene(root, 1000, 650);
+        scene.setOnMousePressed(controller.handler);
+        scene.setOnMouseDragged(controller.handler);
+        stage.setScene(scene);
+        stage.show();
+        controller.simulationContext.width = scene.getWidth();
+        controller.simulationContext.height = scene.getHeight();
+        controller.initialize();
+    }
+>>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
 }
