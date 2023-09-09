@@ -5,6 +5,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -14,32 +15,27 @@ public class SphController {
     @FXML
     Pane pane;
 
+    SimulationContext simulationContext;
+    Physics physics;
+
     private static final int particleSize = 1;
     public static List<Particle> particles;
     public static Grid[][] grid;
     public int initialized = 0;
-    public static boolean resizePending = false;
+    public boolean resizePending = false;
 
     public static Random random = new Random();
 
-    // Mouse emitter: Creates new particles based on the mouse input.
-    // When the mouse button is pressed or dragged, particles are added at the current mouse position.
-    EventHandler<MouseEvent> handler = event -> {
-        double startX;
-        double startY;
-        if (event.getEventType() == MouseEvent.MOUSE_PRESSED || event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
-            startX = event.getSceneX();
-            startY = event.getSceneY();
-            SphController.particles.add(new Particle(startX, SphApplication.scene.getHeight() - startY, 1));
-        }
-    };
+    public SphController(SimulationContext simulationContext) {
+        this.simulationContext = simulationContext;
+        physics = new Physics(simulationContext);
+        particles = initializeParticles(Integer.parseInt(simulationContext.particleCount)); //assume correctness
+    }
 
     /*
-    Particle initializer: This method is responsible for initializing and setting the position of particles at the start of simulation.
-
-    Parameter:
-    - n (int): Starting number of particles within simulation.
-     */
+   Particle initializer: This method is responsible for initializing and setting the position of particles at the start of simulation.
+   Parameter: n (int): Starting number of particles within simulation.
+    */
     public List<Particle> initializeParticles(int n) {
         List<Particle> particles = new ArrayList<>();
         int startPositionX = 0;
@@ -52,30 +48,43 @@ public class SphController {
                 startPositionX = 5;
                 startPositionY += increment;
             }
-            particles.add(new Particle(startPositionX, startPositionY, particleSize));
+            particles.add(new Particle(startPositionX, startPositionY, particleSize, simulationContext));
         }
         return particles;
     }
 
     // Grid Updater: Updates the size of the grid and initializes it.
-    public static void updateGridSize() {
-        double gridSize = Physics.gridSize;
-        int gridLengthX = (int) Math.floor(Physics.width / gridSize) + 1;
-        grid = new Grid[(int) Math.floor(Physics.height / gridSize) + 1][gridLengthX];
+    public Grid[][] updateGridSize(double width, double height, double gridSize) {
+        int gridLengthX = (int) Math.floor(width / gridSize) + 1;
+        Grid[][] grid = new Grid[(int) Math.floor(height / gridSize) + 1][gridLengthX];
 
-        for (Grid[] grid : grid) {
+        for (Grid[] gridArray : grid) {
             for (int i = 0; i < gridLengthX; i++) {
-                grid[i] = new Grid();
+                gridArray[i] = new Grid();
             }
         }
+        return grid;
     }
 
-    private static void rainEmitter(boolean spawnState){
-        if (spawnState) return;
-        Particle newEmitterParticle1 = new Particle((int) Physics.width * 0.33, Physics.height, particleSize);
-        Particle newEmitterParticle2 = new Particle((int) Physics.width * 0.66, Physics.height, particleSize);
+    // Mouse emitter: Creates new particles based on the mouse dialogConfig.
+    // When the mouse button is pressed or dragged, particles are added at the current mouse position.
+    EventHandler<MouseEvent> handler = event -> {
+        double startX;
+        double startY;
+        if (event.getEventType() == MouseEvent.MOUSE_PRESSED || event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
+            startX = event.getSceneX();
+            startY = event.getSceneY();
+            SphController.particles.add(new Particle(startX, SphApplication.scene.getHeight() - startY, particleSize, simulationContext));
+        }
+    };
 
-        //rand number: max = 10, min = 10 -> random.nextInt(max - min) + min;
+
+    private void rainEmitter(boolean spawnState, double width, double height) {
+        if (spawnState) return;
+        Particle newEmitterParticle1 = new Particle((int) width * 0.33, height, particleSize, simulationContext);
+        Particle newEmitterParticle2 = new Particle((int) width * 0.66, height, particleSize, simulationContext);
+
+        //random number: max = 10, min = 10 -> random.nextInt(max - min) + min;
         newEmitterParticle1.velocityX += random.nextInt(10 + 10) - 10;
         newEmitterParticle2.velocityX += random.nextInt(10 + 10) - 10;
 
@@ -85,64 +94,65 @@ public class SphController {
 
     //This method initializes the simulation by setting up the necessary components and runs the simulation loop.
     public void initialize() {
+        //for some reason it starts 2x, first time just ignore it, return
         if (++initialized < 2)
             return;
+
+        grid = updateGridSize(simulationContext.width, simulationContext.height, Physics.gridSize);
+
 
         System.out.println("Started simulation");
         pane.setStyle("-fx-background-color: black;");
 
-        Physics.width = pane.getScene().getWidth();
-        Physics.height = pane.getHeight();
+        //set window size
+        simulationContext.width = pane.getScene().getWidth();
+        simulationContext.height = pane.getHeight();
 
-        updateGridSize();
-        particles = initializeParticles(SphApplication.numOfParticles);
-
+        //mouse listeners
         pane.setOnMousePressed(event -> handler.handle(event));
         pane.setOnMouseReleased(event -> handler.handle(event));
 
+        //window listeners
         pane.widthProperty().addListener((observable, oldValue, newValue) -> {
-            Physics.width = newValue.doubleValue();
+            simulationContext.width = newValue.doubleValue();
             resizePending = true;
         });
 
         pane.heightProperty().addListener((observable, oldValue, newValue) -> {
-            Physics.height = newValue.doubleValue();
+            simulationContext.height = newValue.doubleValue();
             resizePending = true;
         });
 
-        final boolean[] rainEmitterlock = {false}; // false - ready to enter
+        final boolean[] rainEmitterLock = {false}; // false - ready to enter
 
-        //Loop of the simulation
-        //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment
-        int maxFPS = 40;
-        long frameDuration = 1000 / maxFPS;
+        //simulation loop runs on animation timer
+        //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment for faking of realistic movement (so It's not moving too fast)
+
         AnimationTimer timer = new AnimationTimer() {
 
-            private long previousTime = 0;
 
             @Override
             public void handle(long currentTime) {
-                //check if window changed before new threads are created and grid is read
+
+                //check if window changed before the grid is read
                 if (resizePending) {
-                    updateGridSize();
+                    grid = updateGridSize(simulationContext.width, simulationContext.height, Physics.gridSize);
                     resizePending = false;
                 }
 
                 //emitter - new particle every 2nd tick
-                if(SphApplication.isRainEnabled) {
-                    rainEmitterlock[0] = !rainEmitterlock[0];
-                    rainEmitter(rainEmitterlock[0]);
+                if (simulationContext.rainEnabled) {
+                    rainEmitterLock[0] = !rainEmitterLock[0];
+                    rainEmitter(rainEmitterLock[0], simulationContext.width, simulationContext.height);
                 }
 
-
-                Physics.moveParticles(particles);
-                long elapsedTime = (currentTime - previousTime) / 1_000_000;
-                if (elapsedTime < frameDuration) try {
-                    Thread.sleep((frameDuration - elapsedTime));
+                //actual simulation tick
+                try {
+                    physics.moveParticles(particles, simulationContext);
                 } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
-                previousTime = currentTime;
-                Physics.drawParticles(pane, particles);
+                physics.drawParticles(pane, particles);
             }
         };
         timer.start();
