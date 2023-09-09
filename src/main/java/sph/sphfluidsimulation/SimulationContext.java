@@ -1,6 +1,5 @@
 package sph.sphfluidsimulation;
 
-
 public class SimulationContext extends DialogConfig {
     public int threadCount = 0;
     public double width;
