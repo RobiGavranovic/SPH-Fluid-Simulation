@@ -39,10 +39,6 @@ public class Physics {
     }
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
     /*
     drawParticles: Adds particles to the pane.
     Parameters:
@@ -82,11 +78,7 @@ public class Physics {
             int from = i * subsection;
             int to = (i == simulationContext.threadCount - 1) ? totalParticles - 1 : from + subsection;
 
-<<<<<<< HEAD
             updateGridTasks.add(new UpdateGridsTask(from, to, simulationContext));
-=======
-            updateGridTasks.add(new UpdateGridsTask(from, to, simulationContext, this));
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
         }
         executorService.invokeAll(updateGridTasks);
 

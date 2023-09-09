@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+
 public class SphController {
     @FXML
     Pane pane;
@@ -78,11 +79,7 @@ public class SphController {
     };
 
 
-<<<<<<< HEAD
     private void rainEmitter(boolean spawnState, double width, double height) {
-=======
-    private void rainEmitter(boolean spawnState, double width, double height){
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
         if (spawnState) return;
         Particle newEmitterParticle1 = new Particle((int) width * 0.33, height, particleSize, simulationContext);
         Particle newEmitterParticle2 = new Particle((int) width * 0.66, height, particleSize, simulationContext);
@@ -127,29 +124,16 @@ public class SphController {
         });
 
         final boolean[] rainEmitterLock = {false}; // false - ready to enter
-<<<<<<< HEAD
 
         //simulation loop runs on animation timer
         //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment for faking of realistic movement (so It's not moving too fast)
 
-=======
-
-        //Loop of the simulation
-        //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment for faking of realistic movement (so It's not moving too fast)
-        int maxFPS = 1000;
-        long frameDuration = 1000 / maxFPS;
-
-        //simulation loop runs on animation timer
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
         AnimationTimer timer = new AnimationTimer() {
 
 
             @Override
             public void handle(long currentTime) {
-<<<<<<< HEAD
 
-=======
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
                 //check if window changed before the grid is read
                 if (resizePending) {
                     grid = updateGridSize(simulationContext.width, simulationContext.height, Physics.gridSize);
@@ -157,19 +141,12 @@ public class SphController {
                 }
 
                 //emitter - new particle every 2nd tick
-<<<<<<< HEAD
                 if (simulationContext.rainEnabled) {
-=======
-                if(simulationContext.rainEnabled) {
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
                     rainEmitterLock[0] = !rainEmitterLock[0];
                     rainEmitter(rainEmitterLock[0], simulationContext.width, simulationContext.height);
                 }
 
-<<<<<<< HEAD
                 //actual simulation tick
-=======
->>>>>>> b90b9e376493bce5cd9d3d59236455ba705d2efe
                 try {
                     physics.moveParticles(particles, simulationContext);
                 } catch (InterruptedException e) {
