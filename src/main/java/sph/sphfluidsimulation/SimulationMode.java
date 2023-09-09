@@ -1,10 +1,8 @@
 package sph.sphfluidsimulation;
 
-
 public enum SimulationMode {
     SEQUENTIAL("Sequential"),
-    PARALLEL("Parallel"),
-    DISTRIBUTED("Distributed");
+    PARALLEL("Parallel");
 
     private final String text;
 

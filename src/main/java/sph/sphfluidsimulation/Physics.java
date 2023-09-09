@@ -37,8 +37,6 @@ public class Physics {
         for (Neighbor neighbor : neighbors) neighbor.calculateForce();
     }
 
-
-
     /*
     drawParticles: Adds particles to the pane.
     Parameters:

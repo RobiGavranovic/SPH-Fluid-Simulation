@@ -34,15 +34,16 @@ public class SphController {
    Particle initializer: This method is responsible for initializing and setting the position of particles at the start of simulation.
    Parameter: n (int): Starting number of particles within simulation.
     */
+
     public List<Particle> initializeParticles(int n) {
         List<Particle> particles = new ArrayList<>();
-        int startPositionX = 0;
+        int startPositionX = 4;
         int increment = particleSize + 4;
 
         int startPositionY = 2;
         for (; n > 0; n--) {
             startPositionX += increment;
-            if (startPositionX > 600) {
+            if (startPositionX > 796) {
                 startPositionX = 5;
                 startPositionY += increment;
             }
@@ -123,15 +124,8 @@ public class SphController {
 
         final boolean[] rainEmitterLock = {false}; // false - ready to enter
 
-        //Loop of the simulation
-        //issue of frames - simulation runs based on frames not on time - limiting frames is only a hotfix at the moment for faking of realistic movement (so It's not moving too fast)
-        int maxFPS = 1000;
-        long frameDuration = 1000 / maxFPS;
-
         //simulation loop runs on animation timer
         AnimationTimer timer = new AnimationTimer() {
-
-            private long previousTime = 0;
 
             @Override
             public void handle(long currentTime) {

@@ -22,7 +22,6 @@ public class Particle extends Circle {
 
         velocityX = random.nextInt(1 + 1) - 1;
         velocityY = random.nextInt(1 + 1) - 1;
-        ;
     }
 
     //move: Updates the position and velocity of the particle based on the applied forces and other conditions.

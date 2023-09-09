@@ -1,6 +1,5 @@
 package sph.sphfluidsimulation;
 
-
 public class SimulationContext extends DialogConfig {
     public int threadCount = 0;
     public double width;
@@ -15,10 +14,6 @@ public class SimulationContext extends DialogConfig {
                 break;
             case PARALLEL:
                 this.threadCount = Runtime.getRuntime().availableProcessors();
-                break;
-            case DISTRIBUTED:
-                //TODO smth with the distributed
-                //guess not, apparently im making a separate project for distributed version =)
                 break;
         }
 

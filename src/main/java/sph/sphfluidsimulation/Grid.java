@@ -15,7 +15,7 @@ public class Grid {
     }
 
     public void clearGrid() {
-        if (particlesInGrid != null) particlesInGrid.clear();
+        particlesInGrid.clear();
     }
 
     public ArrayList<Particle> getParticlesInGrid() {

@@ -16,7 +16,8 @@ import java.util.List;
 
 public class SphApplication extends Application {
     public static Scene scene;
-    boolean cancel = false;
+    static boolean cancel = false;
+    public static
 
     DialogConfig showConfigurationDialog(boolean isWrongInput) {
         //configuration dialog
@@ -29,8 +30,7 @@ public class SphApplication extends Application {
         TextField particleCountField = new TextField("5000");
         ComboBox<String> modeComboBox = new ComboBox<>(FXCollections.observableArrayList(
                 SimulationMode.SEQUENTIAL.toString(),
-                SimulationMode.PARALLEL.toString(),
-                SimulationMode.DISTRIBUTED.toString())
+                SimulationMode.PARALLEL.toString())
         );
         modeComboBox.setValue(SimulationMode.PARALLEL.toString());
         CheckBox rainCheckBox = new CheckBox("Rain Emitter");
@@ -90,6 +90,7 @@ public class SphApplication extends Application {
     }
 
     public static void main(String[] args) {
+
         launch();
     }
 
@@ -101,7 +102,7 @@ public class SphApplication extends Application {
         stage.setTitle("Smoothed-particle hydrodynamics fluid simulation");
 
         Parent root = fxmlLoader.load();
-        scene = new Scene(root, 1000, 650);
+        scene = new Scene(root, 800, 600);
         scene.setOnMousePressed(controller.handler);
         scene.setOnMouseDragged(controller.handler);
         stage.setScene(scene);

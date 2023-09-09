@@ -28,7 +28,7 @@ public class FindNeighborsTask implements Callable<Void> {
     }
 
     @Override
-    //credit: Mitchell Sayer
+    //credit: Mitchell Sayer: https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/blob/master/
     public Void call() {
         //findNeighbors: finds current neighbors for each particle
         int gridX = particle.gridX;
@@ -54,7 +54,7 @@ public class FindNeighborsTask implements Callable<Void> {
 
         synchronized(physics.neighbors) {
             physics.neighbors.addAll(subNeighbor);
-        }; //synchronised writing
+        } //synchronised writing
         return null;
     }
 
@@ -65,7 +65,7 @@ public class FindNeighborsTask implements Callable<Void> {
     - Particle (Particle): Particle within the grid cell
     - gridCell (Grid): Grid cell that contains particle
      */
-    //credit: Mitchell Sayer
+    //credit: Mitchell Sayer: https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/blob/master/
     void findNeighborsInGrid(Particle particle, Grid gridCell) {
         for (Particle particleA : gridCell.getParticlesInGrid()) {
             if (particle.equals(particleA)) continue;
