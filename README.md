@@ -1,3 +1,5 @@
 # SPH-Fluid-Simulation
-Ne mislim biti doktor fizike, zato sem si pomagal z vsemi računskimi deli programa direktno iz:
+Z vsemi računskimi deli programa sem si pomagal direktno iz:
 https://github.com/mitchellsayer/Smoothed-Particle-Hydrodynamics/tree/master
+
+Mitchell Sayer je bil seznanjem z uporabo njegove kode, prav tako dopustil.
